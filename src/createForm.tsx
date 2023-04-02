@@ -1,18 +1,33 @@
-import { createSignal, Setter } from "solid-js";
-import { createStore } from "solid-js/store";
+import { batch, createSignal } from "solid-js";
+import { createStore, SetStoreFunction } from "solid-js/store";
 
-type ValueType = string | boolean | number;
+type ValueType = string | boolean | number | File[];
+
+type Validation<T> = {
+    required?: boolean;
+    min?: number;
+    max?: number;
+    minLength?: number;
+    maxLength?: number;
+    pattern?: RegExp;
+    custom?: (fields: T) => boolean;
+    error: string;
+};
 
 type Validations<T> = {
-    func: (fields: T) => boolean;
-    error: string;
-}[];
+    [key in keyof T]: Validation<T>[];
+};
 
 type Fields = {
     [key: string]: ValueType;
 };
 
-type FetchFunc<T> = (data: T, setError: Setter<string>) => Promise<void>;
+type Errors<T> = { [key in keyof T]: string };
+
+type FetchFunc<T> = (
+    data: T,
+    additional: { setErrors: SetStoreFunction<Errors<T>>; clearForm: () => void }
+) => void;
 
 type CreateFormProps<T extends Fields> = {
     initialFields: T;
@@ -21,17 +36,39 @@ type CreateFormProps<T extends Fields> = {
 };
 
 export function createForm<T extends Fields>(props: CreateFormProps<T>) {
-    const [fields, setFields] = createStore(props.initialFields);
-    const [error, setError] = createSignal("");
+    const [fields, setFields] = createStore({ ...props.initialFields });
+    const [errors, setErrors] = createStore(
+        Object.keys(props.initialFields).reduce(
+            (prev, current) => ({ ...prev, [current]: "" }),
+            {}
+        ) as Errors<T>
+    );
+    const [wasSubmitted, setWasSubmitted] = createSignal(false);
+
+    const clear = () => {
+        setFields(props.initialFields);
+        batch(() => {
+            Object.entries(errors).forEach(([key]) => {
+                setErrors({ ...errors, [key]: "" });
+            });
+        });
+        setWasSubmitted(false);
+    };
 
     const updateField = (name: keyof T) => (e: Event) => {
         const input = e.currentTarget as HTMLInputElement;
-        type ChangeType = Pick<typeof fields, keyof typeof fields>;
         if (typeof fields[name] === "boolean") {
-            setFields({ [name]: input.checked } as ChangeType);
+            setFields({ ...fields, [name]: input.checked });
+        } else if (Array.isArray(fields[name])) {
+            if (!input.files) return;
+            setFields({
+                ...fields,
+                [name]: [...(fields[name] as File[]), ...input.files],
+            });
         } else {
-            setFields({ [name]: input.value } as ChangeType);
+            setFields({ ...fields, [name]: input.value });
         }
+        if (!wasSubmitted()) return;
         validateFields();
     };
 
@@ -39,30 +76,88 @@ export function createForm<T extends Fields>(props: CreateFormProps<T>) {
         name: keyof T
     ):
         | { checked: boolean; onChange: (e: Event) => void }
-        | { value: string | number; onInput: (e: Event) => void } => {
+        | { value: string | number; onInput: (e: Event) => void }
+        | { onChange: (e: Event) => void } => {
         const value = fields[name];
         if (typeof value === "boolean") {
             return { checked: value, onChange: updateField(name) };
         }
+        if (Array.isArray(value)) {
+            return { onChange: updateField(name) };
+        }
         return { value, onInput: updateField(name) };
     };
 
-    const validateFields = () => {
-        for (const validation of props.validations) {
-            if (!validation.func(fields)) {
-                setError(validation.error);
-                return;
-            }
-        }
-        setError("");
+    const removeFileHandler = (name: keyof T, file: File) => () => {
+        setFields({ ...fields, [name]: (fields[name] as File[]).filter((f) => f !== file) });
     };
 
-    const submitForm = (e?: Event) => {
+    const validateFields = () => {
+        for (const [key, validations] of Object.entries(props.validations)) {
+            const fieldValue = fields[key as keyof T];
+            let isCorrect = true;
+            for (const validation of validations) {
+                const setError = () => {
+                    setErrors({ ...errors, [key as keyof T]: validation.error });
+                    isCorrect = false;
+                };
+
+                if (validation.required && !fieldValue) {
+                    setError();
+                    break;
+                }
+
+                if (validation.min !== undefined && validation.min > (fieldValue as number)) {
+                    setError();
+                    break;
+                }
+
+                if (validation.max !== undefined && validation.max < (fieldValue as number)) {
+                    setError();
+                    break;
+                }
+
+                if (
+                    validation.minLength !== undefined &&
+                    validation.minLength > fieldValue.toString().length
+                ) {
+                    setError();
+                    break;
+                }
+
+                if (
+                    validation.maxLength !== undefined &&
+                    validation.maxLength < fieldValue.toString().length
+                ) {
+                    setError();
+                    break;
+                }
+
+                if (
+                    validation.pattern !== undefined &&
+                    !validation.pattern.test(fieldValue.toString())
+                ) {
+                    setError();
+                    break;
+                }
+
+                if (validation.custom !== undefined && !validation.custom(fields)) {
+                    setError();
+                    break;
+                }
+            }
+            if (!isCorrect) break;
+            setErrors({ ...errors, [key]: "" });
+        }
+    };
+
+    const submit = (e?: Event) => {
         e?.preventDefault();
         validateFields();
-        if (error()) return;
-        props.fetchFunction(fields, setError);
+        setWasSubmitted(true);
+        if (Object.values(errors).some((val) => val !== "")) return;
+        props.fetchFunction(fields, { setErrors, clearForm: clear });
     };
 
-    return { fields, error, getField, submitForm };
+    return { fields, errors, getField, removeFileHandler, submit };
 }

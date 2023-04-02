@@ -1,3 +1,1 @@
-import { createForm } from "./createForm";
-
-export { createForm };
+export * from "./createForm";
