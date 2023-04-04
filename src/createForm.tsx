@@ -46,7 +46,7 @@ export function createForm<T extends Fields>(props: CreateFormProps<T>) {
     const [wasSubmitted, setWasSubmitted] = createSignal(false);
 
     const clear = () => {
-        setFields(props.initialFields);
+        setFields({ ...props.initialFields });
         batch(() => {
             Object.entries(errors).forEach(([key]) => {
                 setErrors({ ...errors, [key]: "" });

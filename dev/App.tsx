@@ -3,8 +3,28 @@ import { createForm } from "../src/index";
 
 const App: Component = () => {
     const form = createForm({
-        initialFields: { color: "", date: "", files: [] as File[] },
-        validations: { color: [], date: [], files: [] },
+        initialFields: {
+            color: "",
+            date: "",
+            datetimelocal: "",
+            email: "",
+            month: "",
+            number: 0,
+            password: "",
+            radio: "value1",
+            files: [] as File[],
+        },
+        validations: {
+            color: [],
+            date: [],
+            files: [],
+            datetimelocal: [],
+            email: [],
+            month: [],
+            number: [],
+            radio: [],
+            password: [],
+        },
         fetchFunction: (data) => {
             console.log(data);
         },
@@ -41,7 +61,8 @@ const App: Component = () => {
             <p>Password</p>
             <input type="password" />
             <p>Radio</p>
-            <input type="radio" />
+            <input type="radio" value="test1" {...form.getField("radio")} />
+            <input type="radio" value="test2" {...form.getField("radio")} />
             <p>Range</p>
             <input type="range" />
             <p>Search</p>
