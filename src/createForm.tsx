@@ -14,10 +14,6 @@ type Validation<T> = {
     error: string;
 };
 
-type Validations<T> = {
-    [key in keyof T]: Validation<T>[];
-};
-
 type Fields = {
     [key: string]: ValueType;
 };
@@ -29,16 +25,30 @@ type FetchFunc<T> = (
     additional: { setErrors: SetStoreFunction<Errors<T>>; clearForm: () => void }
 ) => void;
 
-type CreateFormProps<T extends Fields> = {
-    initialFields: T;
-    validations: Validations<T>;
-    fetchFunction: FetchFunc<T>;
+type InitialField<T, K> = {
+    isRadio?: boolean;
+    initialValue: T;
+    validations?: Validation<K>[] | Validation<K>;
 };
 
-export function createForm<T extends Fields>(props: CreateFormProps<T>) {
-    const [fields, setFields] = createStore({ ...props.initialFields });
+type InitialFields<T extends Fields> = {
+    [key in keyof T]: InitialField<T[key], T>;
+};
+
+export function createForm<T extends Fields>(
+    initialFields: InitialFields<T>,
+    fetchFunc?: FetchFunc<T>
+) {
+    const resetValues = () => {
+        return Object.entries(initialFields).reduce(
+            (prev, [key, value]) => ({ ...prev, [key]: value.initialValue }),
+            {}
+        ) as T;
+    };
+
+    const [values, setValues] = createStore(resetValues());
     const [errors, setErrors] = createStore(
-        Object.keys(props.initialFields).reduce(
+        Object.keys(initialFields).reduce(
             (prev, current) => ({ ...prev, [current]: "" }),
             {}
         ) as Errors<T>
@@ -46,7 +56,7 @@ export function createForm<T extends Fields>(props: CreateFormProps<T>) {
     const [wasSubmitted, setWasSubmitted] = createSignal(false);
 
     const clear = () => {
-        setFields({ ...props.initialFields });
+        setValues(resetValues());
         batch(() => {
             Object.entries(errors).forEach(([key]) => {
                 setErrors({ ...errors, [key]: "" });
@@ -57,46 +67,136 @@ export function createForm<T extends Fields>(props: CreateFormProps<T>) {
 
     const updateField = (name: keyof T) => (e: Event) => {
         const input = e.currentTarget as HTMLInputElement;
-        if (typeof fields[name] === "boolean") {
-            setFields({ ...fields, [name]: input.checked });
-        } else if (Array.isArray(fields[name])) {
+        if (typeof values[name] === "boolean") {
+            setValues({ ...values, [name]: input.checked });
+        } else if (Array.isArray(values[name])) {
             if (!input.files) return;
-            setFields({
-                ...fields,
-                [name]: [...(fields[name] as File[]), ...input.files],
+            setValues({
+                ...values,
+                [name]: [...(values[name] as File[]), ...input.files],
             });
         } else {
-            setFields({ ...fields, [name]: input.value });
+            setValues({ ...values, [name]: input.value });
         }
         if (!wasSubmitted()) return;
         validateFields();
     };
 
-    const getField = (
-        name: keyof T
-    ):
-        | { checked: boolean; onChange: (e: Event) => void }
-        | { value: string | number; onInput: (e: Event) => void }
-        | { onChange: (e: Event) => void } => {
-        const value = fields[name];
-        if (typeof value === "boolean") {
-            return { checked: value, onChange: updateField(name) };
-        }
-        if (Array.isArray(value)) {
-            return { onChange: updateField(name) };
-        }
-        return { value, onInput: updateField(name) };
+    type Field = TextInput | CheckboxInput | FileInput | RadioInput;
+
+    type TextInput = {
+        value: string | number;
+        onInput: (e: Event) => void;
+    };
+    type CheckboxInput = { checked: boolean; onChange: (e: Event) => void };
+    type FileInput = { onChange: (e: Event) => void; removeHandler: (file: File) => void };
+    type RadioInput = (value: string) => {
+        type: "radio";
+        value: string;
+        name: string;
+        checked: boolean;
+        onChange: (e: Event) => void;
     };
 
-    const removeFileHandler = (name: keyof T, file: File) => () => {
-        setFields({ ...fields, [name]: (fields[name] as File[]).filter((f) => f !== file) });
+    const getField = (name: keyof T): Field => {
+        const currentValue = values[name];
+        if (typeof currentValue === "boolean") {
+            return { checked: currentValue, onChange: updateField(name) };
+        }
+        if (Array.isArray(currentValue)) {
+            return {
+                onChange: updateField(name),
+                removeHandler: (file: File) =>
+                    setValues({
+                        ...values,
+                        [name]: (values[name] as File[]).filter((f) => f !== file),
+                    }),
+            };
+        }
+        // const func = (value: string) => ({
+        //     type: "radio",
+        //     value,
+        //     checked: value === currentValue,
+        //     name: name as string,
+        //     onChange: (e: Event) => {
+        //         const input = e.currentTarget as HTMLInputElement;
+        //         if (input.checked) {
+        //             setValues({ ...values, [name]: input.value });
+        //         }
+        //     },
+        // });
+
+        return {
+            value: currentValue,
+            onInput: updateField(name),
+        };
     };
+
+    const fields = Object.keys(initialFields).reduce(
+        (prev, currentKey) => ({ ...prev, [currentKey]: getField(currentKey) }),
+        {}
+    ) as { [key in keyof T]: Field };
 
     const validateFields = () => {
-        for (const [key, validations] of Object.entries(props.validations)) {
-            const fieldValue = fields[key as keyof T];
+        for (const [key, field] of Object.entries(initialFields)) {
+            const fieldValue = values[key as keyof T];
             let isCorrect = true;
-            for (const validation of validations) {
+            if (!field.validations) return;
+            if (Array.isArray(field.validations)) {
+                for (const validation of field.validations) {
+                    const setError = () => {
+                        setErrors({ ...errors, [key as keyof T]: validation.error });
+                        isCorrect = false;
+                    };
+
+                    if (validation.required && !fieldValue) {
+                        setError();
+                        break;
+                    }
+
+                    if (validation.min !== undefined && validation.min > (fieldValue as number)) {
+                        setError();
+                        break;
+                    }
+
+                    if (validation.max !== undefined && validation.max < (fieldValue as number)) {
+                        setError();
+                        break;
+                    }
+
+                    if (
+                        validation.minLength !== undefined &&
+                        validation.minLength > fieldValue.toString().length
+                    ) {
+                        setError();
+                        break;
+                    }
+
+                    if (
+                        validation.maxLength !== undefined &&
+                        validation.maxLength < fieldValue.toString().length
+                    ) {
+                        setError();
+                        break;
+                    }
+
+                    if (
+                        validation.pattern !== undefined &&
+                        !validation.pattern.test(fieldValue.toString())
+                    ) {
+                        setError();
+                        break;
+                    }
+
+                    if (validation.custom !== undefined && !validation.custom(values)) {
+                        setError();
+                        break;
+                    }
+                }
+                if (!isCorrect) break;
+                setErrors({ ...errors, [key]: "" });
+            } else {
+                const validation = field.validations;
                 const setError = () => {
                     setErrors({ ...errors, [key as keyof T]: validation.error });
                     isCorrect = false;
@@ -141,13 +241,11 @@ export function createForm<T extends Fields>(props: CreateFormProps<T>) {
                     break;
                 }
 
-                if (validation.custom !== undefined && !validation.custom(fields)) {
+                if (validation.custom !== undefined && !validation.custom(values)) {
                     setError();
                     break;
                 }
             }
-            if (!isCorrect) break;
-            setErrors({ ...errors, [key]: "" });
         }
     };
 
@@ -156,8 +254,9 @@ export function createForm<T extends Fields>(props: CreateFormProps<T>) {
         validateFields();
         setWasSubmitted(true);
         if (Object.values(errors).some((val) => val !== "")) return;
-        props.fetchFunction(fields, { setErrors, clearForm: clear });
+        if (!fetchFunc) return;
+        fetchFunc(values, { setErrors, clearForm: clear });
     };
 
-    return { fields, errors, getField, removeFileHandler, submit };
+    return { fields, values, errors, setValues, submit };
 }

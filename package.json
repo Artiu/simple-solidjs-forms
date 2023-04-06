@@ -71,6 +71,7 @@
     "vitest": "^0.28.2"
   },
   "keywords": [
-    "SolidJS", "forms"
+    "SolidJS",
+    "forms"
   ]
 }
