@@ -35,8 +35,8 @@ type InitialFields<T extends Fields> = {
     [key in keyof T]: InitialField<T[key], T>;
 };
 
-export function createForm<T extends Fields>(
-    initialFields: InitialFields<T>,
+export function createForm<T extends Fields, K extends InitialFields<T>>(
+    initialFields: K,
     fetchFunc?: FetchFunc<T>
 ) {
     const resetValues = () => {
@@ -82,7 +82,7 @@ export function createForm<T extends Fields>(
         validateFields();
     };
 
-    type Field = TextInput | CheckboxInput | FileInput | RadioInput;
+    type Input = TextInput | CheckboxInput | FileInput;
 
     type TextInput = {
         value: string | number;
@@ -98,7 +98,7 @@ export function createForm<T extends Fields>(
         onChange: (e: Event) => void;
     };
 
-    const getField = (name: keyof T): Field => {
+    const getField = (name: keyof T) => {
         const currentValue = values[name];
         if (typeof currentValue === "boolean") {
             return { checked: currentValue, onChange: updateField(name) };
@@ -113,19 +113,20 @@ export function createForm<T extends Fields>(
                     }),
             };
         }
-        // const func = (value: string) => ({
-        //     type: "radio",
-        //     value,
-        //     checked: value === currentValue,
-        //     name: name as string,
-        //     onChange: (e: Event) => {
-        //         const input = e.currentTarget as HTMLInputElement;
-        //         if (input.checked) {
-        //             setValues({ ...values, [name]: input.value });
-        //         }
-        //     },
-        // });
-
+        if (initialFields[name].isRadio) {
+            return (value: string) => ({
+                type: "radio",
+                value,
+                checked: value === currentValue,
+                name: name as string,
+                onChange: (e: Event) => {
+                    const input = e.currentTarget as HTMLInputElement;
+                    if (input.checked) {
+                        setValues({ ...values, [name]: input.value });
+                    }
+                },
+            });
+        }
         return {
             value: currentValue,
             onInput: updateField(name),
@@ -135,7 +136,7 @@ export function createForm<T extends Fields>(
     const fields = Object.keys(initialFields).reduce(
         (prev, currentKey) => ({ ...prev, [currentKey]: getField(currentKey) }),
         {}
-    ) as { [key in keyof T]: Field };
+    ) as { [key in keyof K]: K[key]["isRadio"] extends true ? RadioInput : Input };
 
     const validateFields = () => {
         for (const [key, field] of Object.entries(initialFields)) {

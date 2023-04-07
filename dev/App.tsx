@@ -10,8 +10,6 @@ const App: Component = () => {
         (values) => console.log(values)
     );
 
-    form.values.;
-
     return (
         <form
             style={{ display: "flex", "flex-direction": "column", width: "200px" }}
@@ -43,8 +41,8 @@ const App: Component = () => {
             <p>Password</p>
             <input type="password" />
             <p>Radio</p>
-            <input {...form.fields.color} />
-            <input {...form.fields.radio("test1")} />
+            <input {...form.fields.radio("elobenc2")} />
+            <input {...form.fields.radio("elobenc")} />
             <p>Range</p>
             <input type="range" />
             <p>Search</p>
