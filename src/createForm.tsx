@@ -7,6 +7,7 @@ type Validation<T> = {
     required?: boolean;
     min?: number;
     max?: number;
+    maxFileSize?: number;
     minLength?: number;
     maxLength?: number;
     pattern?: RegExp;
@@ -22,7 +23,7 @@ type Errors<T> = { [key in keyof T]: string };
 
 type FetchFunc<T> = (
     data: T,
-    additional: { setErrors: SetStoreFunction<Errors<T>>; clearForm: () => void }
+    additional: { setErrors: SetStoreFunction<Errors<T>>; resetForm: () => void }
 ) => void;
 
 type InitialField<T, K> = {
@@ -35,7 +36,7 @@ type InitialFields<T extends Fields> = {
     [key in keyof T]: InitialField<T[key], T>;
 };
 
-export function createForm<T extends Fields, K extends InitialFields<T>>(
+export function createForm<T extends Fields, K extends InitialFields<T> = InitialFields<T>>(
     initialFields: K,
     fetchFunc?: FetchFunc<T>
 ) {
@@ -55,7 +56,7 @@ export function createForm<T extends Fields, K extends InitialFields<T>>(
     );
     const [wasSubmitted, setWasSubmitted] = createSignal(false);
 
-    const clear = () => {
+    const reset = () => {
         setValues(resetValues());
         batch(() => {
             Object.entries(errors).forEach(([key]) => {
@@ -118,7 +119,7 @@ export function createForm<T extends Fields, K extends InitialFields<T>>(
                 type: "radio",
                 value,
                 checked: value === currentValue,
-                name: name as string,
+                name,
                 onChange: (e: Event) => {
                     const input = e.currentTarget as HTMLInputElement;
                     if (input.checked) {
@@ -138,114 +139,73 @@ export function createForm<T extends Fields, K extends InitialFields<T>>(
         {}
     ) as { [key in keyof K]: K[key]["isRadio"] extends true ? RadioInput : Input };
 
+    const validateField = (fieldValue: ValueType, validation: Validation<T>) => {
+        const REQUIRED_VALIDATION =
+            validation.required &&
+            (Array.isArray(fieldValue) ? fieldValue.length < 1 : !fieldValue);
+
+        const MIN_VALIDATION =
+            validation.min !== undefined && validation.min > (fieldValue as number);
+
+        const MAX_VALIDATION =
+            validation.max !== undefined && validation.max < (fieldValue as number);
+
+        const MAXFILESIZE_VALIDATION =
+            validation.maxFileSize !== undefined &&
+            Array.isArray(fieldValue) &&
+            fieldValue.some((file) => file.size > (validation.maxFileSize as number));
+
+        const MINLENGTH_VALIDATION =
+            validation.minLength !== undefined &&
+            (Array.isArray(fieldValue)
+                ? validation.minLength > fieldValue.length
+                : validation.minLength > fieldValue.toString().length);
+
+        const MAXLENGTH_VALIDATION =
+            validation.maxLength !== undefined &&
+            (Array.isArray(fieldValue)
+                ? validation.maxLength > fieldValue.length
+                : validation.maxLength > fieldValue.toString().length);
+
+        const PATTERN_VALIDATION =
+            validation.pattern !== undefined && !validation.pattern.test(fieldValue.toString());
+
+        const CUSTOM_VALIDATION = validation.custom !== undefined && !validation.custom(values);
+
+        const validations = [
+            REQUIRED_VALIDATION,
+            MIN_VALIDATION,
+            MAX_VALIDATION,
+            MAXFILESIZE_VALIDATION,
+            MINLENGTH_VALIDATION,
+            MAXLENGTH_VALIDATION,
+            PATTERN_VALIDATION,
+            CUSTOM_VALIDATION,
+        ];
+
+        return validations.some((val) => val);
+    };
+
     const validateFields = () => {
         for (const [key, field] of Object.entries(initialFields)) {
-            const fieldValue = values[key as keyof T];
+            const fieldValue = values[key];
             let isCorrect = true;
-            if (!field.validations) return;
+            if (!field.validations) continue;
             if (Array.isArray(field.validations)) {
-                for (const validation of field.validations) {
-                    const setError = () => {
-                        setErrors({ ...errors, [key as keyof T]: validation.error });
+                for (const validation of field.validations as Validation<T>[]) {
+                    if (validateField(fieldValue, validation)) {
+                        setErrors({ ...errors, [key]: validation.error });
                         isCorrect = false;
-                    };
-
-                    if (validation.required && !fieldValue) {
-                        setError();
-                        break;
-                    }
-
-                    if (validation.min !== undefined && validation.min > (fieldValue as number)) {
-                        setError();
-                        break;
-                    }
-
-                    if (validation.max !== undefined && validation.max < (fieldValue as number)) {
-                        setError();
-                        break;
-                    }
-
-                    if (
-                        validation.minLength !== undefined &&
-                        validation.minLength > fieldValue.toString().length
-                    ) {
-                        setError();
-                        break;
-                    }
-
-                    if (
-                        validation.maxLength !== undefined &&
-                        validation.maxLength < fieldValue.toString().length
-                    ) {
-                        setError();
-                        break;
-                    }
-
-                    if (
-                        validation.pattern !== undefined &&
-                        !validation.pattern.test(fieldValue.toString())
-                    ) {
-                        setError();
-                        break;
-                    }
-
-                    if (validation.custom !== undefined && !validation.custom(values)) {
-                        setError();
-                        break;
                     }
                 }
-                if (!isCorrect) break;
+                if (!isCorrect) continue;
                 setErrors({ ...errors, [key]: "" });
-            } else {
-                const validation = field.validations;
-                const setError = () => {
-                    setErrors({ ...errors, [key as keyof T]: validation.error });
-                    isCorrect = false;
-                };
-
-                if (validation.required && !fieldValue) {
-                    setError();
-                    break;
-                }
-
-                if (validation.min !== undefined && validation.min > (fieldValue as number)) {
-                    setError();
-                    break;
-                }
-
-                if (validation.max !== undefined && validation.max < (fieldValue as number)) {
-                    setError();
-                    break;
-                }
-
-                if (
-                    validation.minLength !== undefined &&
-                    validation.minLength > fieldValue.toString().length
-                ) {
-                    setError();
-                    break;
-                }
-
-                if (
-                    validation.maxLength !== undefined &&
-                    validation.maxLength < fieldValue.toString().length
-                ) {
-                    setError();
-                    break;
-                }
-
-                if (
-                    validation.pattern !== undefined &&
-                    !validation.pattern.test(fieldValue.toString())
-                ) {
-                    setError();
-                    break;
-                }
-
-                if (validation.custom !== undefined && !validation.custom(values)) {
-                    setError();
-                    break;
-                }
+                continue;
+            }
+            const validation = field.validations as Validation<T>;
+            if (validateField(fieldValue, validation)) {
+                setErrors({ ...errors, [key]: validation.error });
+                isCorrect = false;
             }
         }
     };
@@ -256,8 +216,8 @@ export function createForm<T extends Fields, K extends InitialFields<T>>(
         setWasSubmitted(true);
         if (Object.values(errors).some((val) => val !== "")) return;
         if (!fetchFunc) return;
-        fetchFunc(values, { setErrors, clearForm: clear });
+        fetchFunc(values, { setErrors, resetForm: reset });
     };
 
-    return { fields, values, errors, setValues, submit };
+    return { fields, values, errors, setValues, submit, reset };
 }

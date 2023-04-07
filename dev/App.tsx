@@ -1,11 +1,18 @@
 import { Component, For } from "solid-js";
 import { createForm } from "../src/index";
 
+type Form = {
+    color: string;
+    radio: string;
+    number: number;
+};
+
 const App: Component = () => {
     const form = createForm(
         {
             color: { initialValue: "" },
             radio: { initialValue: "test2", isRadio: true },
+            number: { initialValue: 6, validations: { error: "" } },
         },
         (values) => console.log(values)
     );
