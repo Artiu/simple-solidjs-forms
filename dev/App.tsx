@@ -20,7 +20,7 @@ type Form = {
 };
 
 const App: Component = () => {
-    const form = createForm<Form>(
+    const form = createForm(
         {
             checkbox: { initialValue: true },
             color: { initialValue: "" },

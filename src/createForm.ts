@@ -3,7 +3,7 @@ import { createStore, SetStoreFunction } from "solid-js/store";
 
 type ValueType = string | boolean | number | File[];
 
-type Validation<T> = {
+type Validation<T = any> = {
     required?: boolean;
     min?: number;
     max?: number;
@@ -15,10 +15,6 @@ type Validation<T> = {
     error: string;
 };
 
-type Fields = {
-    [key: string]: ValueType;
-};
-
 type Errors<T> = { [key in keyof T]: string };
 
 type FetchFunc<T> = (
@@ -26,25 +22,31 @@ type FetchFunc<T> = (
     additional: { setErrors: SetStoreFunction<Errors<T>>; resetForm: () => void }
 ) => void;
 
-type InitialField<T, K> = {
+type InitialField = {
     isRadio?: boolean;
-    initialValue: T;
-    validations?: Validation<K>[] | Validation<K>;
+    initialValue: ValueType;
+    validations?: Validation[] | Validation;
 };
 
-type InitialFields<T extends Fields> = {
-    [key in keyof T]: InitialField<T[key], T>;
+type InitialFields = {
+    [key: string]: InitialField;
 };
 
-export function createForm<T extends Fields, K extends InitialFields<T> = InitialFields<T>>(
-    initialFields: K,
-    fetchFunc?: FetchFunc<T>
-) {
+export function createForm<
+    T extends InitialFields,
+    K extends {
+        [key in keyof T]: T[key]["initialValue"] extends Array<File>
+            ? File[]
+            : T[key]["initialValue"] extends boolean
+            ? boolean
+            : T[key]["initialValue"];
+    }
+>(initialFields: T, fetchFunc?: FetchFunc<K>) {
     const resetValues = () => {
         return Object.entries(initialFields).reduce(
             (prev, [key, value]) => ({ ...prev, [key]: value.initialValue }),
             {}
-        ) as T;
+        ) as K;
     };
 
     const [values, setValues] = createStore(resetValues());
@@ -52,7 +54,7 @@ export function createForm<T extends Fields, K extends InitialFields<T> = Initia
         Object.keys(initialFields).reduce(
             (prev, current) => ({ ...prev, [current]: "" }),
             {}
-        ) as Errors<T>
+        ) as Errors<K>
     );
     const [wasSubmitted, setWasSubmitted] = createSignal(false);
 
@@ -110,7 +112,7 @@ export function createForm<T extends Fields, K extends InitialFields<T> = Initia
                 removeHandler: (file: File) =>
                     setValues({
                         ...values,
-                        [name]: (values[name] as File[]).filter((f) => f !== file),
+                        [name]: currentValue.filter((f) => f !== file),
                     }),
             };
         }
@@ -137,9 +139,9 @@ export function createForm<T extends Fields, K extends InitialFields<T> = Initia
     const fields = Object.keys(initialFields).reduce(
         (prev, currentKey) => ({ ...prev, [currentKey]: getField(currentKey) }),
         {}
-    ) as { [key in keyof K]: K[key]["isRadio"] extends true ? RadioInput : Input };
+    ) as { [key in keyof T]: T[key]["isRadio"] extends true ? RadioInput : Input };
 
-    const validateField = (fieldValue: ValueType, validation: Validation<T>) => {
+    const validateField = (fieldValue: ValueType, validation: Validation<typeof values>) => {
         const REQUIRED_VALIDATION =
             validation.required &&
             (Array.isArray(fieldValue) ? fieldValue.length < 1 : !fieldValue);
@@ -192,7 +194,7 @@ export function createForm<T extends Fields, K extends InitialFields<T> = Initia
             let isCorrect = true;
             if (!field.validations) continue;
             if (Array.isArray(field.validations)) {
-                for (const validation of field.validations as Validation<T>[]) {
+                for (const validation of field.validations as Validation<typeof values>[]) {
                     if (validateField(fieldValue, validation)) {
                         setErrors({ ...errors, [key]: validation.error });
                         isCorrect = false;
@@ -202,7 +204,7 @@ export function createForm<T extends Fields, K extends InitialFields<T> = Initia
                 setErrors({ ...errors, [key]: "" });
                 continue;
             }
-            const validation = field.validations as Validation<T>;
+            const validation = field.validations as Validation<typeof values>;
             if (validateField(fieldValue, validation)) {
                 setErrors({ ...errors, [key]: validation.error });
                 isCorrect = false;
