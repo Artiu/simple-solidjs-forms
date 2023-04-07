@@ -10,6 +10,7 @@ type Form = {
 const App: Component = () => {
     const form = createForm(
         {
+            checkbox: { initialValue: true },
             color: { initialValue: "" },
             radio: { initialValue: "test2", isRadio: true },
             number: { initialValue: 6, validations: { error: "" } },
