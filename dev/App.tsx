@@ -2,18 +2,41 @@ import { Component, For } from "solid-js";
 import { createForm } from "../src/index";
 
 type Form = {
+    checkbox: boolean;
     color: string;
-    radio: string;
+    date: string;
+    datetimelocal: string;
+    email: string;
+    file: File[];
+    month: string;
     number: number;
+    radio: string;
+    range: number;
+    search: string;
+    tel: string;
+    time: string;
+    url: string;
+    week: string;
 };
 
 const App: Component = () => {
-    const form = createForm(
+    const form = createForm<Form>(
         {
             checkbox: { initialValue: true },
             color: { initialValue: "" },
-            radio: { initialValue: "test2", isRadio: true },
+            date: { initialValue: "12-09-2022" },
+            datetimelocal: { initialValue: "" },
+            email: { initialValue: "" },
+            file: { initialValue: [] },
+            month: { initialValue: "" },
             number: { initialValue: 6, validations: { error: "" } },
+            radio: { initialValue: "test2", isRadio: true },
+            range: { initialValue: 0 },
+            search: { initialValue: "" },
+            tel: { initialValue: "" },
+            time: { initialValue: "" },
+            url: { initialValue: "" },
+            week: { initialValue: "" },
         },
         (values) => console.log(values)
     );
@@ -24,24 +47,24 @@ const App: Component = () => {
             onSubmit={form.submit}
         >
             <p>Checkbox</p>
-            <input type="checkbox" />
+            <input type="checkbox" {...form.fields.checkbox} />
             <p>Color</p>
             <input type="color" {...form.fields.color} />
             <p>Date</p>
-            <input type="date" />
+            <input type="date" {...form.fields.date} />
             <p>Datetime</p>
-            <input type="datetime-local" />
+            <input type="datetime-local" {...form.fields.datetimelocal} />
             <p>Email</p>
-            <input type="email" />
-            <input type="file" />
-            {/* <For each={form.fields.files}>
+            <input type="email" {...form.fields.email} />
+            <input type="file" {...form.fields.file} />
+            <For each={form.values.file}>
                 {(file, i) => (
                     <p>
                         {i()}.{file.name}
                         <button>X</button>
                     </p>
                 )}
-            </For> */}
+            </For>
             <p>Month</p>
             <input type="month" />
             <p>Number</p>
