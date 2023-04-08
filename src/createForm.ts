@@ -94,12 +94,12 @@ export function createForm<
         validateFields();
     };
 
-    type TextInput = {
+    type TextInput = () => {
         value: string | number;
         onInput: (e: Event) => void;
     };
-    type CheckboxInput = { checked: boolean; onChange: (e: Event) => void };
-    type FileInput = { onChange: (e: Event) => void; removeHandler: (file: File) => void };
+    type CheckboxInput = () => { checked: boolean; onChange: (e: Event) => void };
+    type FileInput = () => { onChange: (e: Event) => void; removeHandler: (file: File) => void };
     type RadioInput = (value: string) => {
         type: "radio";
         value: string;
@@ -111,23 +111,22 @@ export function createForm<
     const getField = (name: keyof T) => {
         const currentValue = values[name];
         if (typeof currentValue === "boolean") {
-            return { checked: currentValue, onChange: updateField(name) };
+            return () => ({ checked: values[name], onChange: updateField(name) });
         }
         if (Array.isArray(currentValue)) {
-            return {
+            return () => ({
                 onChange: updateField(name),
                 removeHandler: (file: File) =>
                     setValues({
                         ...values,
                         [name]: (values[name] as File[]).filter((f) => f !== file),
                     }),
-            };
+            });
         }
         if (initialFields[name].isRadio) {
             return (value: string) => ({
                 type: "radio",
-                value,
-                checked: value === currentValue,
+                checked: value === values[name],
                 name,
                 onChange: (e: Event) => {
                     const input = e.currentTarget as HTMLInputElement;
@@ -137,10 +136,10 @@ export function createForm<
                 },
             });
         }
-        return {
-            value: currentValue,
+        return () => ({
+            value: values[name],
             onInput: updateField(name),
-        };
+        });
     };
 
     const fields = Object.keys(initialFields).reduce(
