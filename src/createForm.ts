@@ -85,7 +85,10 @@ export function createForm<
                 [name]: [...(values[name] as File[]), ...input.files],
             });
         } else {
-            setValues({ ...values, [name]: input.value });
+            setValues({
+                ...values,
+                [name]: typeof values[name] === "number" ? input.valueAsNumber : input.value,
+            });
         }
         if (!wasSubmitted()) return;
         validateFields();

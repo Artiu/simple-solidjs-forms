@@ -24,7 +24,7 @@ const App: Component = () => {
         {
             checkbox: { initialValue: true },
             color: { initialValue: "" },
-            date: { initialValue: "12-09-2022" },
+            date: { initialValue: "2022-09-07" },
             datetimelocal: { initialValue: "" },
             email: { initialValue: "" },
             file: { initialValue: [] },
@@ -66,28 +66,28 @@ const App: Component = () => {
                 )}
             </For>
             <p>Month</p>
-            <input type="month" />
+            <input type="month" {...form.fields.month} />
             <p>Number</p>
-            <input type="number" />
+            <input type="number" {...form.fields.number} />
             <p>Password</p>
-            <input type="password" />
+            <input type="password" {...form.fields.radio} />
             <p>Radio</p>
             <input {...form.fields.radio("elobenc2")} />
             <input {...form.fields.radio("elobenc")} />
             <p>Range</p>
-            <input type="range" />
+            <input type="range" {...form.fields.range} />
             <p>Search</p>
-            <input type="search" />
+            <input type="search" {...form.fields.search} />
             <p>Tel</p>
-            <input type="tel" />
+            <input type="tel" {...form.fields.tel} />
             <p>Text</p>
             <input type="text" />
             <p>Time</p>
-            <input type="time" />
+            <input type="time" {...form.fields.time} />
             <p>Url</p>
-            <input type="url" />
+            <input type="url" {...form.fields.url} />
             <p>Week</p>
-            <input type="week" />
+            <input type="week" {...form.fields.week} />
             <button type="submit">Submit</button>
         </form>
     );
