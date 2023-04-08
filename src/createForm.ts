@@ -91,8 +91,6 @@ export function createForm<
         validateFields();
     };
 
-    type Input = TextInput | CheckboxInput | FileInput;
-
     type TextInput = {
         value: string | number;
         onInput: (e: Event) => void;
@@ -145,7 +143,15 @@ export function createForm<
     const fields = Object.keys(initialFields).reduce(
         (prev, currentKey) => ({ ...prev, [currentKey]: getField(currentKey) }),
         {}
-    ) as { [key in keyof T]: T[key]["isRadio"] extends true ? RadioInput : Input };
+    ) as {
+        [key in keyof T]: T[key]["isRadio"] extends true
+            ? RadioInput
+            : K[key] extends boolean
+            ? CheckboxInput
+            : K[key] extends File[]
+            ? FileInput
+            : TextInput;
+    };
 
     const validateField = (fieldValue: ValueType, validation: Validation<typeof values>) => {
         const REQUIRED_VALIDATION =
