@@ -32,14 +32,20 @@ type InitialFields = {
     [key: string]: InitialField;
 };
 
+type ExtractToValueType<T extends ValueType> = T extends boolean
+    ? boolean
+    : T extends string
+    ? string
+    : T extends number
+    ? number
+    : T extends File[]
+    ? File[]
+    : never;
+
 export function createForm<
     T extends InitialFields,
     K extends {
-        [key in keyof T]: T[key]["initialValue"] extends Array<File>
-            ? File[]
-            : T[key]["initialValue"] extends boolean
-            ? boolean
-            : T[key]["initialValue"];
+        [key in keyof T]: ExtractToValueType<T[key]["initialValue"]>;
     }
 >(initialFields: T, fetchFunc?: FetchFunc<K>) {
     const resetValues = () => {
