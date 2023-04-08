@@ -126,6 +126,7 @@ export function createForm<
         if (initialFields[name].isRadio) {
             return (value: string) => ({
                 type: "radio",
+                value,
                 checked: value === values[name],
                 name,
                 onChange: (e: Event) => {

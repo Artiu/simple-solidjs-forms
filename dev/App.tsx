@@ -15,7 +15,7 @@ const App: Component = () => {
                 initialValue: 6,
             },
             radio: { initialValue: "test2", isRadio: true },
-            range: { initialValue: 0 },
+            range: { initialValue: 45 },
             search: { initialValue: "" },
             tel: { initialValue: "" },
             time: { initialValue: "" },
