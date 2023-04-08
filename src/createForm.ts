@@ -99,7 +99,7 @@ export function createForm<
         onInput: (e: Event) => void;
     };
     type CheckboxInput = () => { checked: boolean; onChange: (e: Event) => void };
-    type FileInput = () => { onChange: (e: Event) => void; removeHandler: (file: File) => void };
+    type FileInput = { onChange: (e: Event) => void; removeHandler: (file: File) => void };
     type RadioInput = (value: string) => {
         type: "radio";
         value: string;
@@ -114,14 +114,14 @@ export function createForm<
             return () => ({ checked: values[name], onChange: updateField(name) });
         }
         if (Array.isArray(currentValue)) {
-            return () => ({
+            return {
                 onChange: updateField(name),
                 removeHandler: (file: File) =>
                     setValues({
                         ...values,
                         [name]: (values[name] as File[]).filter((f) => f !== file),
                     }),
-            });
+            };
         }
         if (initialFields[name].isRadio) {
             return (value: string) => ({

@@ -44,12 +44,12 @@ const App: Component = () => {
             <input type="datetime-local" {...form.fields.datetimelocal()} />
             <p>Email</p>
             <input type="email" {...form.fields.email()} />
-            <input type="file" onChange={form.fields.file().onChange} />
+            <input type="file" onChange={form.fields.file.onChange} />
             <For each={form.values.file}>
                 {(file, i) => (
                     <p>
                         {i()}.{file.name}
-                        <button onClick={() => form.fields.file().removeHandler(file)}>X</button>
+                        <button onClick={() => form.fields.file.removeHandler(file)}>X</button>
                     </p>
                 )}
             </For>
