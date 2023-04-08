@@ -116,7 +116,7 @@ export function createForm<
                 removeHandler: (file: File) =>
                     setValues({
                         ...values,
-                        [name]: currentValue.filter((f) => f !== file),
+                        [name]: (values[name] as File[]).filter((f) => f !== file),
                     }),
             };
         }
