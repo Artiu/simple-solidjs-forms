@@ -206,13 +206,14 @@ export function createForm<
     const validateFields = () => {
         for (const [key, field] of Object.entries(initialFields)) {
             const fieldValue = values[key];
-            let isCorrect = true;
             if (!field.validations) continue;
             if (Array.isArray(field.validations)) {
+                let isCorrect = true;
                 for (const validation of field.validations as Validation<typeof values>[]) {
                     if (validateField(fieldValue, validation)) {
                         setErrors({ ...errors, [key]: validation.error });
                         isCorrect = false;
+                        break;
                     }
                 }
                 if (!isCorrect) continue;
@@ -222,8 +223,9 @@ export function createForm<
             const validation = field.validations as Validation<typeof values>;
             if (validateField(fieldValue, validation)) {
                 setErrors({ ...errors, [key]: validation.error });
-                isCorrect = false;
+                continue;
             }
+            setErrors({ ...errors, [key]: "" });
         }
     };
 

@@ -4,15 +4,28 @@ import { createForm } from "../src/index";
 const App: Component = () => {
     const form = createForm(
         {
-            checkbox: { initialValue: true },
-            color: { initialValue: "" },
+            checkbox: {
+                initialValue: true,
+                validations: { required: true, error: "Checkbox is required" },
+            },
+            color: {
+                initialValue: "",
+                validations: [{ required: true, error: "color is required" }],
+            },
             date: { initialValue: "2022-09-07" },
             datetimelocal: { initialValue: "" },
-            email: { initialValue: "" },
+            email: {
+                initialValue: "",
+                validations: [
+                    { required: true, error: "Email is required" },
+                    { minLength: 3, error: "Email too short" },
+                ],
+            },
             file: { initialValue: [] },
             month: { initialValue: "" },
             number: {
                 initialValue: 6,
+                validations: { min: 0, max: 100, error: "Number out of range" },
             },
             radio: { initialValue: "test2", isRadio: true },
             range: { initialValue: 45 },
@@ -33,6 +46,7 @@ const App: Component = () => {
         <form
             style={{ display: "flex", "flex-direction": "column", width: "200px" }}
             onSubmit={form.submit}
+            novalidate
         >
             <p>Checkbox</p>
             <input type="checkbox" {...form.fields.checkbox()} />
@@ -72,6 +86,7 @@ const App: Component = () => {
             <input type="url" {...form.fields.url()} />
             <p>Week</p>
             <input type="week" {...form.fields.week()} />
+            {JSON.stringify(form.errors)}
             <button type="button" onClick={changeEmailValue}>
                 Set email to "It works"
             </button>
