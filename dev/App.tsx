@@ -35,7 +35,9 @@ const App: Component = () => {
             url: { initialValue: "" },
             week: { initialValue: "" },
         },
-        (values) => console.log(values)
+        (values, additional) => {
+            console.log(values);
+        }
     );
 
     const changeEmailValue = () => {

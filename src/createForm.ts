@@ -206,7 +206,10 @@ export function createForm<
     const validateFields = () => {
         for (const [key, field] of Object.entries(initialFields)) {
             const fieldValue = values[key];
-            if (!field.validations) continue;
+            if (!field.validations) {
+                setErrors({ ...errors, [key]: "" });
+                continue;
+            }
             if (Array.isArray(field.validations)) {
                 let isCorrect = true;
                 for (const validation of field.validations as Validation<typeof values>[]) {
