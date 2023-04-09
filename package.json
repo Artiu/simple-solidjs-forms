@@ -1,5 +1,5 @@
 {
-  "version": "1.0.0",
+  "version": "1.0.1",
   "name": "simple-solidjs-forms",
   "description": "Utility for faster form creation in SolidJS",
   "license": "MIT",
@@ -24,10 +24,6 @@
   "types": "./dist/index.d.ts",
   "browser": {},
   "exports": {
-    "solid": {
-      "development": "./dist/dev.jsx",
-      "import": "./dist/index.jsx"
-    },
     "development": {
       "import": {
         "types": "./dist/index.d.ts",

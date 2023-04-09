@@ -181,8 +181,8 @@ export function createForm<
         const MAXLENGTH_VALIDATION =
             validation.maxLength !== undefined &&
             (Array.isArray(fieldValue)
-                ? validation.maxLength > fieldValue.length
-                : validation.maxLength > fieldValue.toString().length);
+                ? validation.maxLength < fieldValue.length
+                : validation.maxLength < fieldValue.toString().length);
 
         const PATTERN_VALIDATION =
             validation.pattern !== undefined && !validation.pattern.test(fieldValue.toString());
