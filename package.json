@@ -1,5 +1,5 @@
 {
-  "version": "1.0.7",
+  "version": "1.0.8",
   "name": "simple-solidjs-forms",
   "description": "Utility for faster form creation in SolidJS",
   "license": "MIT",
