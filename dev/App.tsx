@@ -21,7 +21,13 @@ const App: Component = () => {
                     { minLength: 3, error: "Email too short" },
                 ],
             },
-            file: { initialValue: [] },
+            file: {
+                initialValue: [],
+                validations: [
+                    { required: true, error: "File is required!" },
+                    { maxFileSize: 176810, error: "File too large!" },
+                ],
+            },
             month: { initialValue: "" },
             number: {
                 initialValue: 6,
@@ -41,7 +47,7 @@ const App: Component = () => {
     );
 
     const changeEmailValue = () => {
-        form.setValues({ email: "It works" });
+        form.updateValue("email", "It works");
     };
 
     return (

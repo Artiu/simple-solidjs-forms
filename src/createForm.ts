@@ -74,22 +74,8 @@ export function createForm<
         setWasSubmitted(false);
     };
 
-    const updateField = (name: keyof T) => (e: Event) => {
-        const input = e.currentTarget as HTMLInputElement;
-        if (typeof values[name] === "boolean") {
-            setValues({ ...values, [name]: input.checked });
-        } else if (Array.isArray(values[name])) {
-            if (!input.files) return;
-            setValues({
-                ...values,
-                [name]: [...(values[name] as File[]), ...input.files],
-            });
-        } else {
-            setValues({
-                ...values,
-                [name]: typeof values[name] === "number" ? input.valueAsNumber : input.value,
-            });
-        }
+    const updateValue = <T extends keyof K>(name: T, newValue: K[T]) => {
+        setValues({ [name]: newValue } as any);
         if (!wasSubmitted()) return;
         validateFields();
     };
@@ -111,16 +97,26 @@ export function createForm<
     const getField = (name: keyof T) => {
         const currentValue = values[name];
         if (typeof currentValue === "boolean") {
-            return () => ({ checked: values[name], onChange: updateField(name) });
+            return () => ({
+                checked: values[name],
+                onChange: (e: Event) => {
+                    updateValue(name, (e.currentTarget as HTMLInputElement).checked as K[keyof T]);
+                },
+            });
         }
         if (Array.isArray(currentValue)) {
             return {
-                onChange: updateField(name),
+                onChange: (e: Event) => {
+                    const input = e.currentTarget as HTMLInputElement;
+                    if (!input.files) return;
+                    updateValue(name, [...(values[name] as File[]), ...input.files] as K[keyof T]);
+                    input.value = "";
+                },
                 removeHandler: (file: File) =>
-                    setValues({
-                        ...values,
-                        [name]: (values[name] as File[]).filter((f) => f !== file),
-                    }),
+                    updateValue(
+                        name,
+                        (values[name] as File[]).filter((f) => f !== file) as K[keyof T]
+                    ),
             };
         }
         if (initialFields[name].isRadio) {
@@ -132,14 +128,22 @@ export function createForm<
                 onChange: (e: Event) => {
                     const input = e.currentTarget as HTMLInputElement;
                     if (input.checked) {
-                        setValues({ ...values, [name]: input.value });
+                        updateValue(name, input.value as K[keyof T]);
                     }
                 },
             });
         }
         return () => ({
             value: values[name],
-            onInput: updateField(name),
+            onInput: (e: Event) => {
+                const input = e.currentTarget as HTMLInputElement;
+                updateValue(
+                    name,
+                    (typeof values[name] === "number"
+                        ? input.valueAsNumber
+                        : input.value) as K[keyof T]
+                );
+            },
         });
     };
 
@@ -241,5 +245,5 @@ export function createForm<
         fetchFunc(values, { setErrors, resetForm: reset });
     };
 
-    return { fields, values, errors, setValues, submit, reset };
+    return { fields, values, errors, updateValue, submit, reset };
 }
