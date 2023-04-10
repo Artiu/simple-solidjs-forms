@@ -1,5 +1,5 @@
 {
-  "version": "1.0.5",
+  "version": "1.0.6",
   "name": "simple-solidjs-forms",
   "description": "Utility for faster form creation in SolidJS",
   "license": "MIT",
@@ -40,8 +40,7 @@
   "typesVersions": {},
   "scripts": {
     "dev": "vite serve dev",
-    "build": "tsup",
-    "publish": "npm run build && npm publish"
+    "build": "tsup"
   },
   "peerDependencies": {
     "solid-js": "^1.6.0"
